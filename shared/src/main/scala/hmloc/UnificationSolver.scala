@@ -7,6 +7,11 @@ import hmloc.utils.shorthands._
 import scala.collection.immutable.Queue
 import scala.collection.mutable
 import scala.collection.mutable.{Queue => MutQueue, Set => MutSet, Map => MutMap}
+import scala.collection.mutable.ListBuffer
+
+import io.circe._, io.circe.generic.auto._, io.circe.parser._, io.circe.syntax._
+import java.io.{File, PrintWriter, FileOutputStream, FileWriter}
+import scala.io.Source
 
 /* Unification solver creates data flows from sub-typing constraints. It also formats
  * reports for incorrect data flows.
@@ -64,12 +69,14 @@ trait UnificationSolver extends TyperDatatypes {
       println(s"U $u")
       val st1 = u.a.unwrapProvs
       val st2 = u.b.unwrapProvs
-
+      println(s"U ${st1.getClass()} and ${st2.getClass()}")
       (st1, st2) match {
         case (tr1: TypeRef, tr2: TypeRef) if tr1.defn === tr2.defn && tr1.targs.length === tr2.targs.length =>
           tr1.targs.zip(tr2.targs).foreach { case (arg1, arg2) =>
             enqueueUnification(Unification(Queue(Constructor(arg1, arg2, tr1, tr2, u))))
           }
+          u.serializeDataFlow
+
         case (_: TypeRef, _: TypeRef) => addError(u)
         case (tup1: TupleType, tup2: TupleType) if tup1.fields.length === tup2.fields.length =>
             tup1.fields.map(_._2).zip(tup2.fields.map(_._2)).foreach {
@@ -355,6 +362,121 @@ trait UnificationSolver extends TyperDatatypes {
         UniErrReport(mainMsg, seqString, msgs, sctx, level)
       }
       report
+    }
+
+    private def buildFlattenedJSON(df: DataFlow): Json = {
+      val flattened = io.circe.parser.parse(flattenDataFlowJson(df)).getOrElse(Json.Null)
+      flattened
+    }
+
+    //TODO : Capture Type Args
+    def serializeDataFlow: String = {
+      val newData = flow.map(buildFlattenedJSON)
+      val file = new File("unification.json")
+      
+      val existingJson = if (file.exists()) {
+        parse(Source.fromFile(file).mkString).getOrElse(Json.obj("dataflow" -> Json.arr()))
+      } else {
+        Json.obj("dataflow" -> Json.arr())
+      }
+      
+      val updatedJson = existingJson.asObject.flatMap(_("dataflow")) match {
+        case Some(oldDataflow) =>
+          val oldArray = oldDataflow.asArray.getOrElse(Vector.empty)
+          Json.obj("dataflow" -> Json.fromValues(oldArray ++ newData))
+        case None =>
+          Json.obj("dataflow" -> Json.fromValues(newData))
+      }
+
+      val pw = new PrintWriter(new FileWriter(file, false))
+      pw.write(updatedJson.spaces2)
+      pw.close()
+      
+      ""
+    }
+
+    private def flattenDataFlowJson(df: DataFlow): String = {
+      def toJson(df: DataFlow, acc: ListBuffer[Json]): Unit = {
+        def jsonType(name: String, desc: Option[String] = None): Json =
+          Json.obj(
+            "Type" -> Json.obj(
+              "name" -> Json.fromString(name),
+              "args" -> Json.arr(),
+              "desc" -> desc.map(Json.fromString).getOrElse(Json.Null)
+            )
+          )
+
+        def jsonTypeVar(name: String, desc: Option[String] = None): Json =
+          Json.obj(
+            "TypeVar" -> Json.obj(
+              "name" -> Json.fromString(name),
+              "desc" -> desc.map(Json.fromString).getOrElse(Json.Null)
+            )
+          )
+
+        def jsonConstructorArg(name: String, argIndex: Int, enter : Bool, desc: Option[String] = None): Json =
+          Json.obj(
+            "ConstructorArg" -> Json.obj(
+              "name" -> Json.fromString(name),
+              "arg_index" -> Json.fromInt(argIndex),
+              "enter" -> Json.fromBoolean(enter),
+              "desc" -> desc.map(Json.fromString).getOrElse(Json.Null)
+            )
+          )
+
+        def jsonProgLoc(line: Int, spanStart: Int, spanEnd: Int, desc: String): Json =
+          Json.obj(
+            "ProgLoc" -> Json.obj(
+              "line" -> Json.fromInt(line),
+              "char_range" -> Json.arr(Json.fromInt(spanStart), Json.fromInt(spanEnd)),
+              "desc" -> (if (desc.isEmpty) Json.Null else Json.fromString(desc))
+            )
+          )
+
+
+        def flowItem(x: Any): Json = x match {
+          case pt: ProvType     => jsonType(pt.unwrapProvs.toString)
+          case tv: TV           => jsonTypeVar(tv.toString)
+          case ls: TupleType    => jsonType("Tuple")
+          case ft: FunctionType => jsonType("Function")
+          case tf: TypeRef if tf.defn == TypeName("list") => jsonType("List")
+          case tf: TypeRef      => jsonType("TypeRef")
+          case other            => jsonType("Unknown-" + other.getClass.getSimpleName)
+        }
+
+        df match {
+          case c: Constraint =>
+            acc += flowItem(c.a)
+            c.getCleanProvs.foreach { tp =>
+              tp.loco.foreach { loc =>
+              acc += jsonProgLoc(loc.origin.startLineNum, loc.spanStart, loc.spanEnd, tp.desc)
+          }
+        }
+            acc += flowItem(c.b)
+
+
+          case Constructor(a, b, ctora, ctorb, uni) =>
+            acc += flowItem(a)
+            a.uniqueTypeUseLocations.foreach {
+              case TypeProvenance(S(loc), _, _, _) =>
+                acc += jsonProgLoc(loc.origin.startLineNum, loc.spanStart, loc.spanEnd, "")
+            }
+            val ctoraName = flowItem(ctora).hcursor.downField("Type").get[String]("name").getOrElse("")
+            acc += jsonConstructorArg(ctoraName, 0, enter = true, Some(""))
+            uni.flow.foreach(sub => toJson(sub, acc))
+            val ctorbName = flowItem(ctorb).hcursor.downField("Type").get[String]("name").getOrElse("")
+            acc += jsonConstructorArg(ctorbName, 0, enter = false, Some(""))
+            b.uniqueTypeUseLocations.foreach {
+              case TypeProvenance(S(loc), _, _, _) =>
+                acc += jsonProgLoc(loc.origin.startLineNum, loc.spanStart, loc.spanEnd, "")
+            }
+          acc += flowItem(b)
+        }
+      }
+
+      val buf = ListBuffer.empty[Json]
+      toJson(df, buf)
+      buf.asJson.noSpaces
     }
   }
 
