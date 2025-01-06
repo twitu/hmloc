@@ -440,8 +440,8 @@ trait UnificationSolver extends TyperDatatypes {
           case ls: TupleType    => jsonType("Tuple")
           case ft: FunctionType => jsonType("Function")
           case tf: TypeRef if tf.defn == TypeName("list") => jsonType("List")
-          case tf: TypeRef      => jsonType("TypeRef")
-          case other            => jsonType("Unknown-" + other.getClass.getSimpleName)
+          case tf: TypeRef      => jsonType(tf.toString)
+          case other            => jsonType(other.toString)
         }
 
         df match {
