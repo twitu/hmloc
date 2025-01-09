@@ -390,22 +390,28 @@ class Typer(var dbg: Boolean, var verbose: Bool, var explainErrors: Bool)
         val res_ty = TypeRef(TypeName("list"), v_ty :: Nil)(tp(cons.toLoc, "cons"))
         con(vs_ty, res_ty, res_ty)
       case App(f, a) =>
+        // version 1 verbose style application unification
+        val f_ty = typeTerm(f)
+        val a_ty = typeTerm(a)
+        val res = freshVar(prov)
+        val resTy = con(f_ty, FunctionType(a_ty, res)(hintProv(prov)), res)
+        resTy
         // version 2 simplified style
-        val fun_ty = typeTerm(f)
-        val arg_ty = typeTerm(a)
-        val funProv = tp(f.toCoveringLoc, "applied expression")
-        def go(f_ty: ST): ST = f_ty.unwrapProvs match {
-          case FunctionType(l, r) =>
-            con(arg_ty, l, r.withProv(prov))
-          case _ =>
-            val res = freshVar(prov, N)
-            val resTy = con(fun_ty, FunctionType(arg_ty, res)(
-              // prov
-              funProv // TODO: better?
-            ), res)
-            resTy
-        }
-        go(fun_ty)
+        // val fun_ty = typeTerm(f)
+        // val arg_ty = typeTerm(a)
+        // val funProv = tp(f.toCoveringLoc, "applied expression")
+        // def go(f_ty: ST): ST = f_ty.unwrapProvs match {
+        //   case FunctionType(l, r) =>
+        //     con(arg_ty, l, r.withProv(prov))
+        //   case _ =>
+        //     val res = freshVar(prov, N)
+        //     val resTy = con(fun_ty, FunctionType(arg_ty, res)(
+        //       // prov
+        //       funProv // TODO: better?
+        //     ), res)
+        //     resTy
+        // }
+        // go(fun_ty)
       case Let(isrec, nme, rhs, bod) =>
         val n_ty = typeLetRhs(isrec, nme, rhs)
         val newCtx = ctx.nest

@@ -199,7 +199,7 @@ trait UnificationSolver extends TyperDatatypes {
     if (uniState.error.nonEmpty) {
       uniState.reportStats :: s"UERR ${uniState.error.size} errors" :: uniState.error.map(_.toString()).toList
     } else {
-      Ls()
+      Ls(uniState.reportStats)
     }
   }
 
