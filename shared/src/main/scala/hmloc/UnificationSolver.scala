@@ -79,9 +79,10 @@ trait UnificationSolver extends TyperDatatypes {
 
         case (_: TypeRef, _: TypeRef) => addError(u)
         case (tup1: TupleType, tup2: TupleType) if tup1.fields.length === tup2.fields.length =>
-            tup1.fields.map(_._2).zip(tup2.fields.map(_._2)).foreach {
-              case (arg1, arg2) => enqueueUnification(Unification(Queue(Constructor(arg1, arg2, tup1, tup2, u))))
-            }
+          tup1.fields.map(_._2).zip(tup2.fields.map(_._2)).zipWithIndex.foreach {
+            case ((arg1, arg2), idx) => 
+            enqueueUnification(Unification(Queue(Constructor(arg1, arg2, tup1, tup2, u)(idx))))
+          }
         case (_: TupleType, _: TupleType) => addError(u)
         case (FunctionType(arg1, res1), FunctionType(arg2, res2)) =>
           enqueueUnification(Unification(Queue(Constructor(arg1, arg2, st1, st2, u))))
@@ -375,17 +376,23 @@ trait UnificationSolver extends TyperDatatypes {
       val file = new File("unification.json")
       
       val existingJson = if (file.exists()) {
-        parse(Source.fromFile(file).mkString).getOrElse(Json.obj("dataflow" -> Json.arr()))
+        parse(Source.fromFile(file).mkString).getOrElse(Json.obj(
+          "file_path" -> Json.fromString("Scratch.mls"),
+          "dataflow" -> Json.arr()
+        ))
       } else {
-        Json.obj("dataflow" -> Json.arr())
+        Json.obj(
+          "file_path" -> Json.fromString("Scratch.mls"),
+          "dataflow" -> Json.arr()
+        )
       }
       
       val updatedJson = existingJson.asObject.flatMap(_("dataflow")) match {
         case Some(oldDataflow) =>
           val oldArray = oldDataflow.asArray.getOrElse(Vector.empty)
-          Json.obj("dataflow" -> Json.fromValues(oldArray ++ newData))
+          existingJson.deepMerge(Json.obj("dataflow" -> Json.fromValues(oldArray ++ newData)))
         case None =>
-          Json.obj("dataflow" -> Json.fromValues(newData))
+          existingJson.deepMerge(Json.obj("dataflow" -> Json.fromValues(newData)))
       }
 
       val pw = new PrintWriter(new FileWriter(file, false))
@@ -455,17 +462,17 @@ trait UnificationSolver extends TyperDatatypes {
             acc += flowItem(c.b)
 
 
-          case Constructor(a, b, ctora, ctorb, uni) =>
+          case c @ Constructor(a, b, ctora, ctorb, uni) =>
             acc += flowItem(a)
             a.uniqueTypeUseLocations.foreach {
               case TypeProvenance(S(loc), _, _, _) =>
                 acc += jsonProgLoc(loc.origin.startLineNum, loc.spanStart, loc.spanEnd, "")
             }
             val ctoraName = flowItem(ctora).hcursor.downField("Type").get[String]("name").getOrElse("")
-            acc += jsonConstructorArg(ctoraName, 0, enter = true, Some(""))
+            acc += jsonConstructorArg(ctoraName, c.getIndex, enter = true, Some(""))
             uni.flow.foreach(sub => toJson(sub, acc))
             val ctorbName = flowItem(ctorb).hcursor.downField("Type").get[String]("name").getOrElse("")
-            acc += jsonConstructorArg(ctorbName, 0, enter = false, Some(""))
+            acc += jsonConstructorArg(ctorbName, c.getIndex, enter = false, Some(""))
             b.uniqueTypeUseLocations.foreach {
               case TypeProvenance(S(loc), _, _, _) =>
                 acc += jsonProgLoc(loc.origin.startLineNum, loc.spanStart, loc.spanEnd, "")
@@ -559,8 +566,9 @@ trait UnificationSolver extends TyperDatatypes {
       c
     }
   }
-  case class Constructor(a: ST, b: ST, ctora: ST, ctorb: ST, uni: Unification) extends DataFlow
-
+  case class Constructor(a: ST, b: ST, ctora: ST, ctorb: ST, uni: Unification)(implicit val argIndex: Int = 0) extends DataFlow {
+    def getIndex = argIndex
+  }
 
   // Note: maybe this and `extrude` should be merged?
   def freshenAbove(lim: Int, ty: SimpleType, rigidify: Bool = false)(implicit lvl: Int): SimpleType = {
