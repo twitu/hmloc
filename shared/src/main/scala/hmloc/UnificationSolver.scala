@@ -442,7 +442,7 @@ trait UnificationSolver extends TyperDatatypes {
 
 
         def flowItem(x: Any): Json = x match {
-          case pt: ProvType     => jsonType(pt.unwrapProvs.toString)
+          case pt: ProvType     => flowItem(pt.unwrapProvs)
           case tv: TV           => jsonTypeVar(tv.toString)
           case ls: TupleType    => jsonType("Tuple")
           case ft: FunctionType => jsonType("Function")
