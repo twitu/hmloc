@@ -413,10 +413,10 @@ trait UnificationSolver extends TyperDatatypes {
             )
           )
 
-        def jsonTypeVar(name: String, desc: Option[String] = None): Json =
+        def jsonTypeVar(uid: String, desc: Option[String] = None): Json =
           Json.obj(
             "TypeVar" -> Json.obj(
-              "name" -> Json.fromString(name),
+              "name" -> Json.fromString(uid),
               "desc" -> desc.map(Json.fromString).getOrElse(Json.Null)
             )
           )
@@ -443,11 +443,11 @@ trait UnificationSolver extends TyperDatatypes {
 
         def flowItem(x: Any): Json = x match {
           case pt: ProvType     => flowItem(pt.unwrapProvs)
-          case tv: TV           => jsonTypeVar(tv.toString)
-          case ls: TupleType    => jsonType("Tuple")
-          case ft: FunctionType => jsonType("Function")
-          case tf: TypeRef if tf.defn == TypeName("list") => jsonType("List")
-          case tf: TypeRef      => jsonType(tf.toString)
+          case tv: TV           => jsonTypeVar(tv.uid.toString, Some(tv.prov.desc))
+          case ls: TupleType    => jsonType("Tuple", Some(ls.prov.desc))
+          case ft: FunctionType => jsonType("Function", Some(ft.prov.desc))
+          case tf: TypeRef if tf.defn == TypeName("list") => jsonType("List", Some(tf.prov.desc))
+          case tf: TypeRef      => jsonType(tf.toString, Some(tf.prov.desc))
           case other            => jsonType(other.toString)
         }
 
