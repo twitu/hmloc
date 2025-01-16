@@ -431,14 +431,17 @@ trait UnificationSolver extends TyperDatatypes {
             )
           )
 
-        def jsonProgLoc(line: Int, spanStart: Int, spanEnd: Int, desc: String): Json =
+        def jsonProgLoc(loc: Loc, desc: String): Json = {
+          val (_, _, spanStart) = loc.origin.fph.getLineColAt(loc.spanStart)
+          val (_, _, spanEnd) = loc.origin.fph.getLineColAt(loc.spanEnd)
           Json.obj(
             "ProgLoc" -> Json.obj(
-              "line" -> Json.fromInt(line),
+              "line" -> Json.fromInt(loc.origin.startLineNum),
               "char_range" -> Json.arr(Json.fromInt(spanStart), Json.fromInt(spanEnd)),
               "desc" -> (if (desc.isEmpty) Json.Null else Json.fromString(desc))
             )
           )
+        }
 
 
         def flowItem(x: Any): Json = x match {
@@ -456,7 +459,7 @@ trait UnificationSolver extends TyperDatatypes {
             acc += flowItem(c.a)
             c.getCleanProvs.foreach { tp =>
               tp.loco.foreach { loc =>
-              acc += jsonProgLoc(loc.origin.startLineNum, loc.spanStart, loc.spanEnd, tp.desc)
+              acc += jsonProgLoc(loc, tp.desc)
           }
         }
             acc += flowItem(c.b)
@@ -466,7 +469,7 @@ trait UnificationSolver extends TyperDatatypes {
             acc += flowItem(a)
             a.uniqueTypeUseLocations.foreach {
               case TypeProvenance(S(loc), _, _, _) =>
-                acc += jsonProgLoc(loc.origin.startLineNum, loc.spanStart, loc.spanEnd, "")
+                acc += jsonProgLoc(loc, "")
             }
             val ctoraName = flowItem(ctora).hcursor.downField("Type").get[String]("name").getOrElse("")
             acc += jsonConstructorArg(ctoraName, c.getIndex, enter = true, Some(""))
@@ -475,7 +478,7 @@ trait UnificationSolver extends TyperDatatypes {
             acc += jsonConstructorArg(ctorbName, c.getIndex, enter = false, Some(""))
             b.uniqueTypeUseLocations.foreach {
               case TypeProvenance(S(loc), _, _, _) =>
-                acc += jsonProgLoc(loc.origin.startLineNum, loc.spanStart, loc.spanEnd, "")
+                acc += jsonProgLoc(loc, "")
             }
           acc += flowItem(b)
         }
