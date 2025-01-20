@@ -312,6 +312,52 @@ class Typer(var dbg: Boolean, var verbose: Bool, var explainErrors: Bool)
         = trace(s"$lvl. Typing ${if (ctx.inPattern) "pattern" else "term"} $term ${term.getClass.getSimpleName}") {
     // implicit val prov: TypeProvenance = ttp(term)
     implicit def prov(implicit file: FileName, line: Line): TypeProvenance = ttp(term, desc)
+
+  def bound(lhs: SimpleType, rhs: SimpleType): Unit = {
+    def propagateBounds(tv: TypeVariable, other: SimpleType, isUpper: Boolean): Unit = {
+      if (isUpper) {
+        if (!tv.upperBounds.contains(other)) {
+          tv.upperBounds = other :: tv.upperBounds
+          tv.lowerBounds.foreach(lb => bound(lb, other))
+          other match {
+            case ft: FunctionType => 
+              bound(ft.lhs, tv)
+              bound(tv, ft.rhs)
+            case tt: TupleType =>
+              tt.fields.foreach { case (_, t) => bound(tv, t) }
+            case _ => ()
+          }
+        }
+      } else {
+        if (!tv.lowerBounds.contains(other)) {
+          tv.lowerBounds = other :: tv.lowerBounds
+          tv.upperBounds.foreach(ub => bound(other, ub))
+          other match {
+            case ft: FunctionType =>
+              bound(tv, ft.lhs)
+              bound(ft.rhs, tv)
+            case tt: TupleType =>
+              tt.fields.foreach { case (_, t) => bound(t, tv) }
+            case _ => ()
+          }
+        }
+      }
+    }
+
+    (lhs.unwrapProvs, rhs.unwrapProvs) match {
+      case (ltv: TypeVariable, rtv: TypeVariable) =>
+        propagateBounds(ltv, rtv, isUpper = false)
+        propagateBounds(rtv, ltv, isUpper = true)
+      
+      case (ltv: TypeVariable, r) =>
+        propagateBounds(ltv, r, isUpper = true)
+      
+      case (l, rtv: TypeVariable) =>
+        propagateBounds(rtv, l, isUpper = false)
+      
+      case _ => ()
+    }
+  }
     
     /** Constrain lhs and rhs type and handle errors if any
       *
@@ -321,6 +367,7 @@ class Typer(var dbg: Boolean, var verbose: Bool, var explainErrors: Bool)
       * @return
       */
     def con(lhs: SimpleType, rhs: SimpleType, res: SimpleType): SimpleType = {
+      bound(lhs, rhs)
       uniState.unify(lhs, rhs)
       res
     }
