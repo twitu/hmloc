@@ -14,6 +14,8 @@ import org.scalatest.concurrent.{Signaler, TimeLimitedTests}
 import os.Path
 
 import java.io.{File, PrintWriter, FileOutputStream, FileWriter}
+import scala.io.Source
+import io.circe._
 
 abstract class ModeType {
   def expectTypeErrors: Bool
@@ -805,9 +807,13 @@ class DiffTests
 
     val unificationFile = new File("unification.json")
     val jsonFile = new PrintWriter(new FileWriter(unificationFile, false))
+    val testFilePath = file.toIO.getAbsolutePath
     try rec(allLines, defaultMode) finally {
       out.close()
     }
+    val jsonContent = io.circe.parser.parse(Source.fromFile(unificationFile).mkString).getOrElse(Json.obj())
+    val updatedJson = jsonContent.deepMerge(Json.obj("file_path" -> Json.fromString(testFilePath)))
+    jsonFile.write(updatedJson.spaces2)
     jsonFile.close()
     val testFailed = failures.nonEmpty || unmergedChanges.nonEmpty
     val result = strw.toString
