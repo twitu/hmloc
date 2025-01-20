@@ -220,6 +220,52 @@ trait UnificationSolver extends TyperDatatypes {
       tvSet.toSet
     }
 
+    
+    def monotonic(): Boolean = {
+      if (flow.isEmpty) return true
+      val firstDF = flow.head
+      val a = firstDF.getStart
+      val b = firstDF.getEnd
+
+      val forwardFlow = (b, a) match {
+        case (tv: TypeVariable, _) if tv.lowerBounds.contains(a) => true
+        case _ => false
+      }
+
+      def checkConstraint(a0: ST, b0: ST): Boolean =
+        if (forwardFlow)
+          // forward means: a0 is TV => b0 in a0.upperBounds OR b0 is TV => a0 in b0.lowerBounds
+          (a0 match {
+            case tv: TypeVariable => tv.upperBounds.contains(b0)
+            case _ => false
+          }) || (b0 match {
+            case tv: TypeVariable => tv.lowerBounds.contains(a0)
+            case _ => false
+          })
+        else
+          // backward means: a0 is TV => b0 in a0.lowerBounds OR b0 is TV => a0 in b0.upperBounds
+          (a0 match {
+            case tv: TypeVariable => tv.lowerBounds.contains(b0)
+            case _ => false
+          }) || (b0 match {
+            case tv: TypeVariable => tv.upperBounds.contains(a0)
+            case _ => false
+          })
+
+      def recurse(ds: List[DataFlow]): Boolean = ds match {
+        case Nil => true
+        case Constraint(a0, b0) :: tail =>
+          checkConstraint(a0.unwrapProvs, b0.unwrapProvs) && recurse(tail)
+        case Constructor(a1, b1, _, _, subUni) :: tail =>
+          // subUni must also be monotonic, but direction doesn't apply to a1,b1
+          subUni.monotonic() && recurse(tail)
+      }
+
+      recurse(flow.tail.toList)
+    }
+ 
+
+
     override def compare(that: Unification): Int = {
       val levelComp = this.level.compare(that.level)
       if (levelComp != 0) {
@@ -372,6 +418,10 @@ trait UnificationSolver extends TyperDatatypes {
 
     //TODO : Capture Type Args
     def serializeDataFlow: String = {
+      if(!monotonic()){
+        println(s"Skipping non-monotonic unification : $this")
+        return ""
+      }
       val newData = flow.map(buildFlattenedJSON)
       val file = new File("unification.json")
       
@@ -446,7 +496,10 @@ trait UnificationSolver extends TyperDatatypes {
 
         def flowItem(x: Any): Json = x match {
           case pt: ProvType     => flowItem(pt.unwrapProvs)
-          case tv: TV           => jsonTypeVar(tv.uid.toString, Some(tv.prov.desc))
+          case tv: TV           => {
+            println(s"tv : ${tv.toString},  upperbound : ${tv.upperBounds}, lowerbounds : ${tv.lowerBounds}")
+            jsonTypeVar(tv.uid.toString, Some(tv.prov.desc))
+          }
           case ls: TupleType    => jsonType("Tuple", Some(ls.prov.desc))
           case ft: FunctionType => jsonType("Function", Some(ft.prov.desc))
           case tf: TypeRef if tf.defn == TypeName("list") => jsonType("List", Some(tf.prov.desc))
