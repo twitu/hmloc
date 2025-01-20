@@ -418,12 +418,12 @@ trait UnificationSolver extends TyperDatatypes {
 
     //TODO : Capture Type Args
     def serializeDataFlow: String = {
-      if(!monotonic()){
-        println(s"Skipping non-monotonic unification : $this")
-        return ""
-      }
-      val newData = flow.map(buildFlattenedJSON)
+      // if(!monotonic()){
+      //   println(s"Skipping non-monotonic unification : $this")
+      //   return ""
+      // }
       val file = new File("unification.json")
+      val newData = flow.map(buildFlattenedJSON)
       
       val existingJson = if (file.exists()) {
         parse(Source.fromFile(file).mkString).getOrElse(Json.obj(
@@ -436,13 +436,12 @@ trait UnificationSolver extends TyperDatatypes {
           "dataflow" -> Json.arr()
         )
       }
-      
-      val updatedJson = existingJson.asObject.flatMap(_("dataflow")) match {
-        case Some(oldDataflow) =>
-          val oldArray = oldDataflow.asArray.getOrElse(Vector.empty)
-          existingJson.deepMerge(Json.obj("dataflow" -> Json.fromValues(oldArray ++ newData)))
-        case None =>
-          existingJson.deepMerge(Json.obj("dataflow" -> Json.fromValues(newData)))
+
+      val updatedJson = existingJson.hcursor.downField("dataflow").as[Vector[Json]] match {
+        case Right(oldArr) =>
+          existingJson.deepMerge(Json.obj("dataflow" -> Json.fromValues(oldArr ++ newData)))
+        case _ =>
+          Json.obj("dataflow" -> Json.fromValues(newData))
       }
 
       val pw = new PrintWriter(new FileWriter(file, false))
@@ -525,10 +524,10 @@ trait UnificationSolver extends TyperDatatypes {
                 acc += jsonProgLoc(loc, "")
             }
             val ctoraName = flowItem(ctora).hcursor.downField("Type").get[String]("name").getOrElse("")
-            acc += jsonConstructorArg(ctoraName, c.getIndex, enter = true, Some(""))
+            acc += jsonConstructorArg(ctoraName, c.getIndex, enter = true,Some(ctora.prov.desc))
             uni.flow.foreach(sub => toJson(sub, acc))
             val ctorbName = flowItem(ctorb).hcursor.downField("Type").get[String]("name").getOrElse("")
-            acc += jsonConstructorArg(ctorbName, c.getIndex, enter = false, Some(""))
+            acc += jsonConstructorArg(ctorbName, c.getIndex, enter = false, Some(ctorb.prov.desc))
             b.uniqueTypeUseLocations.foreach {
               case TypeProvenance(S(loc), _, _, _) =>
                 acc += jsonProgLoc(loc, "")

@@ -13,6 +13,7 @@ import org.scalatest.time._
 import org.scalatest.concurrent.{Signaler, TimeLimitedTests}
 import os.Path
 
+import java.io.{File, PrintWriter, FileOutputStream, FileWriter}
 
 abstract class ModeType {
   def expectTypeErrors: Bool
@@ -802,9 +803,12 @@ class DiffTests
     ctx = libCtx
     declared = libDeclared
 
+    val unificationFile = new File("unification.json")
+    val jsonFile = new PrintWriter(new FileWriter(unificationFile, false))
     try rec(allLines, defaultMode) finally {
       out.close()
     }
+    jsonFile.close()
     val testFailed = failures.nonEmpty || unmergedChanges.nonEmpty
     val result = strw.toString
     val endTime = System.nanoTime()
