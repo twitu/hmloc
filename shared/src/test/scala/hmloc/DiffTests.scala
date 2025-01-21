@@ -805,16 +805,17 @@ class DiffTests
     ctx = libCtx
     declared = libDeclared
 
-    val unificationFile = new File("unification.json")
-    val jsonFile = new PrintWriter(new FileWriter(unificationFile, false))
+    val unificationFile = new File(s"$file.json")
+    val jsonFile = new FileWriter(unificationFile, false)
     val testFilePath = file.toIO.getAbsolutePath
     try rec(allLines, defaultMode) finally {
       out.close()
     }
-    val jsonContent = io.circe.parser.parse(Source.fromFile(unificationFile).mkString).getOrElse(Json.obj())
+    val jsonContent = typer.uniState.jsonContent
     val updatedJson = jsonContent.deepMerge(Json.obj("file_path" -> Json.fromString(testFilePath)))
     jsonFile.write(updatedJson.spaces2)
     jsonFile.close()
+
     val testFailed = failures.nonEmpty || unmergedChanges.nonEmpty
     val result = strw.toString
     val endTime = System.nanoTime()

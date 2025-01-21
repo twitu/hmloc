@@ -31,6 +31,7 @@ trait UnificationSolver extends TyperDatatypes {
     // max queue length, total unifications solved
   ) extends Iterator[Unification] {
     var stats: (Int, Int) = (0, 0)
+    var jsonContent = Json.obj()
     def enqueueUnification(u: Unification): Unit = if (!cached(u)) {
       // TODO: fix this so that recursion can be stopped
       if (u.level >= 4) {
@@ -69,13 +70,13 @@ trait UnificationSolver extends TyperDatatypes {
       println(s"U $u")
       val st1 = u.a.unwrapProvs
       val st2 = u.b.unwrapProvs
-      println(s"U ${st1.getClass()} and ${st2.getClass()}")
       (st1, st2) match {
         case (tr1: TypeRef, tr2: TypeRef) if tr1.defn === tr2.defn && tr1.targs.length === tr2.targs.length =>
           tr1.targs.zip(tr2.targs).foreach { case (arg1, arg2) =>
             enqueueUnification(Unification(Queue(Constructor(arg1, arg2, tr1, tr2, u))))
           }
-          u.serializeDataFlow
+          println("Serializing dataflow")
+          jsonContent = u.serializeDataFlow(jsonContent)
 
         case (_: TypeRef, _: TypeRef) => addError(u)
         case (tup1: TupleType, tup2: TupleType) if tup1.fields.length === tup2.fields.length =>
@@ -416,39 +417,18 @@ trait UnificationSolver extends TyperDatatypes {
       flattened
     }
 
-    //TODO : Capture Type Args
-    def serializeDataFlow: String = {
+    def serializeDataFlow(existingJson: io.circe.Json): io.circe.Json = {
       // if(!monotonic()){
       //   println(s"Skipping non-monotonic unification : $this")
       //   return ""
       // }
-      val file = new File("unification.json")
       val newData = flow.map(buildFlattenedJSON)
-      
-      val existingJson = if (file.exists()) {
-        parse(Source.fromFile(file).mkString).getOrElse(Json.obj(
-          "file_path" -> Json.fromString("Scratch.mls"),
-          "dataflow" -> Json.arr()
-        ))
-      } else {
-        Json.obj(
-          "file_path" -> Json.fromString("Scratch.mls"),
-          "dataflow" -> Json.arr()
-        )
-      }
-
-      val updatedJson = existingJson.hcursor.downField("dataflow").as[Vector[Json]] match {
+      existingJson.hcursor.downField("dataflow").as[Vector[Json]] match {
         case Right(oldArr) =>
-          existingJson.deepMerge(Json.obj("dataflow" -> Json.fromValues(oldArr ++ newData)))
+          Json.obj("dataflow" -> Json.fromValues(oldArr ++ newData))
         case _ =>
           Json.obj("dataflow" -> Json.fromValues(newData))
       }
-
-      val pw = new PrintWriter(new FileWriter(file, false))
-      pw.write(updatedJson.spaces2)
-      pw.close()
-      
-      ""
     }
 
     private def flattenDataFlowJson(df: DataFlow): String = {
