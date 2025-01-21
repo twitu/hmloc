@@ -417,20 +417,51 @@ trait UnificationSolver extends TyperDatatypes {
       flattened
     }
 
+    // def serializeDataFlow(existingJson: io.circe.Json): io.circe.Json = {
+    //   // if(!monotonic()){
+    //   //   println(s"Skipping non-monotonic unification : $this")
+    //   //   return ""
+    //   // }
+    //   val newData = flow.map(buildFlattenedJSON)
+    //   existingJson.hcursor.downField("dataflow").as[Vector[Json]] match {
+    //     case Right(oldArr) =>
+    //       Json.obj("dataflow" -> Json.fromValues(oldArr ++ newData))
+    //     case _ =>
+    //       Json.obj("dataflow" -> Json.fromValues(newData))
+    //   }
+    // }
+    // def serializeDataFlow(existingJson: io.circe.Json): io.circe.Json = {
+    //   // if(!monotonic()){
+    //   //   println(s"Skipping non-monotonic unification : $this")
+    //   //   return ""
+    //   // }
+    //   val flowArrayBuf = ListBuffer[Json]()
+    //   flow.foreach { df => flowArrayBuf += buildFlattenedJSON(df) }
+    //   val newDataArr = Json.arr(flowArrayBuf.toSeq: _*)
+    //   existingJson.hcursor.downField("dataflow").as[Vector[Json]] match {
+    //     case Right(oldArr) => Json.obj("dataflow" -> Json.arr((oldArr :+ newDataArr): _*))
+    //     case _             => Json.obj("dataflow" -> Json.arr(newDataArr))
+    //   }
+    // }
+
     def serializeDataFlow(existingJson: io.circe.Json): io.circe.Json = {
-      // if(!monotonic()){
-      //   println(s"Skipping non-monotonic unification : $this")
-      //   return ""
-      // }
-      val newData = flow.map(buildFlattenedJSON)
+      val flowElements = ListBuffer[Json]()
+      flow.foreach { df => 
+        val flattenedBuf = ListBuffer[Json]()
+        val tempJson = flattenDataFlowJson(df)
+        io.circe.parser.parse(tempJson).foreach(json => 
+          json.asArray.foreach(arr => flowElements ++= arr)
+        )
+      }
+      
+      val newDataArr = Json.arr(flowElements.toSeq: _*)
+      
       existingJson.hcursor.downField("dataflow").as[Vector[Json]] match {
-        case Right(oldArr) =>
-          Json.obj("dataflow" -> Json.fromValues(oldArr ++ newData))
-        case _ =>
-          Json.obj("dataflow" -> Json.fromValues(newData))
+        case Right(oldArr) => Json.obj("dataflow" -> Json.arr((oldArr :+ newDataArr): _*))
+        case _             => Json.obj("dataflow" -> Json.arr(newDataArr))
       }
     }
-
+    
     private def flattenDataFlowJson(df: DataFlow): String = {
       def toJson(df: DataFlow, acc: ListBuffer[Json]): Unit = {
         def jsonType(name: String, desc: Option[String] = None): Json =
@@ -486,36 +517,73 @@ trait UnificationSolver extends TyperDatatypes {
           case other            => jsonType(other.toString)
         }
 
-        df match {
-          case c: Constraint =>
-            acc += flowItem(c.a)
-            c.getCleanProvs.foreach { tp =>
-              tp.loco.foreach { loc =>
-              acc += jsonProgLoc(loc, tp.desc)
+        // df match {
+        //   case c: Constraint =>
+        //     acc += flowItem(c.a)
+        //     c.getCleanProvs.foreach { tp =>
+        //       tp.loco.foreach { loc =>
+        //       acc += jsonProgLoc(loc, tp.desc)
+        //   }
+        // }
+        //     acc += flowItem(c.b)
+
+
+          // case c @ Constructor(a, b, ctora, ctorb, uni) =>
+          //   acc += flowItem(a)
+          //   a.uniqueTypeUseLocations.foreach {
+          //     case TypeProvenance(S(loc), _, _, _) =>
+          //       acc += jsonProgLoc(loc, "")
+          //   }
+          //   val ctoraName = flowItem(ctora).hcursor.downField("Type").get[String]("name").getOrElse("")
+          //   acc += jsonConstructorArg(ctoraName, c.getIndex, enter = true,Some(ctora.prov.desc))
+          //   uni.flow.foreach(sub => toJson(sub, acc))
+          //   val ctorbName = flowItem(ctorb).hcursor.downField("Type").get[String]("name").getOrElse("")
+          //   acc += jsonConstructorArg(ctorbName, c.getIndex, enter = false, Some(ctorb.prov.desc))
+          //   b.uniqueTypeUseLocations.foreach {
+          //     case TypeProvenance(S(loc), _, _, _) =>
+          //       acc += jsonProgLoc(loc, "")
+          //   }
+          // acc += flowItem(b)
+          df match {
+            case c: Constraint =>
+              val subflowBuf = ListBuffer[Json]()
+              subflowBuf += flowItem(c.a)
+              c.getCleanProvs.foreach { tp =>
+                tp.loco.foreach { loc =>
+                  subflowBuf += jsonProgLoc(loc, tp.desc)
+                }
+              }
+              subflowBuf += flowItem(c.b)
+              acc ++= subflowBuf
+
+            case c @ Constructor(a, b, ctora, ctorb, uni) =>
+              val subflowBuf = ListBuffer[Json]()
+              // record the main 'a'
+              subflowBuf += flowItem(a)
+              a.uniqueTypeUseLocations.foreach {
+                case TypeProvenance(S(loc), _, _, _) => subflowBuf += jsonProgLoc(loc, "")
+              }
+
+              // record constructor-arg enter
+              val ctoraName = flowItem(ctora).hcursor.downField("Type").get[String]("name").getOrElse("")
+              subflowBuf += jsonConstructorArg(ctoraName, c.getIndex, enter = true, Some(ctora.prov.desc))
+
+              // subflow from unification
+              uni.flow.foreach(sub => toJson(sub, subflowBuf))
+
+              // record constructor-arg exit
+              val ctorbName = flowItem(ctorb).hcursor.downField("Type").get[String]("name").getOrElse("")
+              subflowBuf += jsonConstructorArg(ctorbName, c.getIndex, enter = false, Some(ctorb.prov.desc))
+
+              // record the main 'b'
+              b.uniqueTypeUseLocations.foreach {
+                case TypeProvenance(S(loc), _, _, _) => subflowBuf += jsonProgLoc(loc, "")
+              }
+              subflowBuf += flowItem(b)
+
+              acc ++= subflowBuf
           }
-        }
-            acc += flowItem(c.b)
-
-
-          case c @ Constructor(a, b, ctora, ctorb, uni) =>
-            acc += flowItem(a)
-            a.uniqueTypeUseLocations.foreach {
-              case TypeProvenance(S(loc), _, _, _) =>
-                acc += jsonProgLoc(loc, "")
-            }
-            val ctoraName = flowItem(ctora).hcursor.downField("Type").get[String]("name").getOrElse("")
-            acc += jsonConstructorArg(ctoraName, c.getIndex, enter = true,Some(ctora.prov.desc))
-            uni.flow.foreach(sub => toJson(sub, acc))
-            val ctorbName = flowItem(ctorb).hcursor.downField("Type").get[String]("name").getOrElse("")
-            acc += jsonConstructorArg(ctorbName, c.getIndex, enter = false, Some(ctorb.prov.desc))
-            b.uniqueTypeUseLocations.foreach {
-              case TypeProvenance(S(loc), _, _, _) =>
-                acc += jsonProgLoc(loc, "")
-            }
-          acc += flowItem(b)
-        }
       }
-
       val buf = ListBuffer.empty[Json]
       toJson(df, buf)
       buf.asJson.noSpaces
