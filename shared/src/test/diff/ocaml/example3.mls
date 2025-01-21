@@ -1,0 +1,163 @@
+:d
+:unifyDbg
+:unify
+let version_check (is_stable, count) =
+    if is_stable then count + 1 else count
+let version_validate (is_released, name) =
+    if is_released
+    then print_string ("Released: " ^ name)
+    else print_string ("Unreleased: " ^ name)
+//│ 1. Typing term is_stable, count, => if is_stable(true) then + count 1 then (false) then count Lam
+//│ | 1. Typing pattern is_stable, count, Tup
+//│ | | 1. Typing pattern is_stable Var
+//│ | | 1. : α42'
+//│ | | 1. Typing pattern count Var
+//│ | | 1. : α43'
+//│ | 1. : ([α42'], [α43'],)
+//│ | 1. Typing term if is_stable(true) then + count 1 then (false) then count If
+//│ | | If(Var(is_stable), List(IfThen(Var(true), App(App(Var(+), Var(count)), IntLit(1)), IfThen(Var(false), Var(count)))
+//│ | | 1. Typing term is_stable Var
+//│ | | 1. : [α42']
+//│ | | U Q [α42'] ~ bool
+//│ | | U L: 0 [α42' ~ bool, α42' <: bool]
+//│ | | 1. Typing term + count 1 App
+//│ | | | 1. Typing term + count App
+//│ | | | | 1. Typing term + Var
+//│ | | | | 1. : [(int -> (int -> int))]
+//│ | | | | 1. Typing term count Var
+//│ | | | | 1. : [α43']
+//│ | | | | U Q [(int -> (int -> int))] ~ ([α43'] -> α45')
+//│ | | | | U L: 0 [(int -> (int -> int)) ~ ([α43'] -> α45'), (int -> (int -> int)) <: ([α43'] -> α45')]
+//│ | | | | U Q int ~ [α43']
+//│ | | | | U Q (int -> int) ~ α45'
+//│ | | | | U L: 1 [int ~ α43', [int - (int -> (int -> int)) ~ ([α43'] -> α45') - α43', L: 0 [(int -> (int -> int)) ~ ([α43'] -> α45'), (int -> (int -> int)) <: ([α43'] -> α45')]]]
+//│ | | | | U L: 1 [(int -> int) ~ α45', [(int -> int) - (int -> (int -> int)) ~ ([α43'] -> α45') - α45', L: 0 [(int -> (int -> int)) ~ ([α43'] -> α45'), (int -> (int -> int)) <: ([α43'] -> α45')]]]
+//│ | | | 1. : α45'
+//│ | | | 1. Typing term 1 IntLit
+//│ | | | 1. : [int]
+//│ | | | U Q α45' ~ ([int] -> α46')
+//│ | | | U L: 0 [α45' ~ ([int] -> α46'), α45' <: ([int] -> α46')]
+//│ | | | U Q (int -> int) ~ ([int] -> α46')
+//│ | | | U L: 1 [(int -> int) ~ ([int] -> α46'), [(int -> int) - (int -> (int -> int)) ~ ([α43'] -> α45') - α45', L: 0 [(int -> (int -> int)) ~ ([α43'] -> α45'), (int -> (int -> int)) <: ([α43'] -> α45')]], α45' <: ([int] -> α46')]
+//│ | | | U Q int ~ [int]
+//│ | | | U Q int ~ α46'
+//│ | | | U L: 2 [int ~ int, [int - (int -> int) ~ ([int] -> α46') - int, L: 1 [(int -> int) ~ ([int] -> α46'), [(int -> int) - (int -> (int -> int)) ~ ([α43'] -> α45') - α45', L: 0 [(int -> (int -> int)) ~ ([α43'] -> α45'), (int -> (int -> int)) <: ([α43'] -> α45')]], α45' <: ([int] -> α46')]]]
+//│ | | | Serializing dataflow
+//│ | | | tv : α45',  upperbound : List(α46', α45', ([int] -> α46')), lowerbounds : List(α45', α46', int)
+//│ | | | tv : α45',  upperbound : List(α46', α45', ([int] -> α46')), lowerbounds : List(α45', α46', int)
+//│ | | | U L: 2 [int ~ α46', [int - (int -> int) ~ ([int] -> α46') - α46', L: 1 [(int -> int) ~ ([int] -> α46'), [(int -> int) - (int -> (int -> int)) ~ ([α43'] -> α45') - α45', L: 0 [(int -> (int -> int)) ~ ([α43'] -> α45'), (int -> (int -> int)) <: ([α43'] -> α45')]], α45' <: ([int] -> α46')]]]
+//│ | | 1. : α46'
+//│ | | U Q α46' ~ α44'
+//│ | | U L: 0 [α46' ~ α44', α46' <: α44']
+//│ | | U Q int ~ α44'
+//│ | | U L: 2 [int ~ α44', [int - (int -> int) ~ ([int] -> α46') - α46', L: 1 [(int -> int) ~ ([int] -> α46'), [(int -> int) - (int -> (int -> int)) ~ ([α43'] -> α45') - α45', L: 0 [(int -> (int -> int)) ~ ([α43'] -> α45'), (int -> (int -> int)) <: ([α43'] -> α45')]], α45' <: ([int] -> α46')]], α46' <: α44']
+//│ | | 1. Typing term count Var
+//│ | | 1. : [α43']
+//│ | | U Q [α43'] ~ α44'
+//│ | | U L: 0 [α43' ~ α44', α43' <: α44']
+//│ | | U Q int ~ α44'
+//│ | | U L: 1 [int ~ α44', [int - (int -> (int -> int)) ~ ([α43'] -> α45') - α43', L: 0 [(int -> (int -> int)) ~ ([α43'] -> α45'), (int -> (int -> int)) <: ([α43'] -> α45')]], α43' <: α44']
+//│ | | U Q int ~ α46'
+//│ | | U L: 1 [int ~ α46', [int - (int -> (int -> int)) ~ ([α43'] -> α45') - α43', L: 0 [(int -> (int -> int)) ~ ([α43'] -> α45'), (int -> (int -> int)) <: ([α43'] -> α45')]], α43' <: α44', α44' :> α46']
+//│ | 1. : α44'
+//│ 1. : (([α42'], [α43'],) -> α44')
+//│ ⬤ U Typed as: (([α42'], [α43'],) -> α44')
+//│  where: 
+//│ 1. Typing term is_released, name, => if is_released(true) then print_string (^ "Released: " name) then (false) then print_string (^ "Unreleased: " name) Lam
+//│ | 1. Typing pattern is_released, name, Tup
+//│ | | 1. Typing pattern is_released Var
+//│ | | 1. : α48'
+//│ | | 1. Typing pattern name Var
+//│ | | 1. : α49'
+//│ | 1. : ([α48'], [α49'],)
+//│ | 1. Typing term if is_released(true) then print_string (^ "Released: " name) then (false) then print_string (^ "Unreleased: " name) If
+//│ | | If(Var(is_released), List(IfThen(Var(true), App(Var(print_string), App(App(Var(^), StrLit(Released: )), Var(name))), IfThen(Var(false), App(Var(print_string), App(App(Var(^), StrLit(Unreleased: )), Var(name)))))
+//│ | | 1. Typing term is_released Var
+//│ | | 1. : [α48']
+//│ | | U Q [α48'] ~ bool
+//│ | | U L: 0 [α48' ~ bool, α48' <: bool]
+//│ | | 1. Typing term print_string (^ "Released: " name) App
+//│ | | | 1. Typing term print_string Var
+//│ | | | 1. : [(string -> unit)]
+//│ | | | 1. Typing term ^ "Released: " name App
+//│ | | | | 1. Typing term ^ "Released: " App
+//│ | | | | | 1. Typing term ^ Var
+//│ | | | | | 1. : [(string -> (string -> string))]
+//│ | | | | | 1. Typing term "Released: " StrLit
+//│ | | | | | 1. : [string]
+//│ | | | | | U Q [(string -> (string -> string))] ~ ([string] -> α51')
+//│ | | | | | U L: 0 [(string -> (string -> string)) ~ ([string] -> α51'), (string -> (string -> string)) <: ([string] -> α51')]
+//│ | | | | | U Q string ~ [string]
+//│ | | | | | U Q (string -> string) ~ α51'
+//│ | | | | | U L: 1 [string ~ string, [string - (string -> (string -> string)) ~ ([string] -> α51') - string, L: 0 [(string -> (string -> string)) ~ ([string] -> α51'), (string -> (string -> string)) <: ([string] -> α51')]]]
+//│ | | | | | Serializing dataflow
+//│ | | | | | U L: 1 [(string -> string) ~ α51', [(string -> string) - (string -> (string -> string)) ~ ([string] -> α51') - α51', L: 0 [(string -> (string -> string)) ~ ([string] -> α51'), (string -> (string -> string)) <: ([string] -> α51')]]]
+//│ | | | | 1. : α51'
+//│ | | | | 1. Typing term name Var
+//│ | | | | 1. : [α49']
+//│ | | | | U Q α51' ~ ([α49'] -> α52')
+//│ | | | | U L: 0 [α51' ~ ([α49'] -> α52'), α51' <: ([α49'] -> α52')]
+//│ | | | | U Q (string -> string) ~ ([α49'] -> α52')
+//│ | | | | U L: 1 [(string -> string) ~ ([α49'] -> α52'), [(string -> string) - (string -> (string -> string)) ~ ([string] -> α51') - α51', L: 0 [(string -> (string -> string)) ~ ([string] -> α51'), (string -> (string -> string)) <: ([string] -> α51')]], α51' <: ([α49'] -> α52')]
+//│ | | | | U Q string ~ [α49']
+//│ | | | | U Q string ~ α52'
+//│ | | | | U L: 2 [string ~ α49', [string - (string -> string) ~ ([α49'] -> α52') - α49', L: 1 [(string -> string) ~ ([α49'] -> α52'), [(string -> string) - (string -> (string -> string)) ~ ([string] -> α51') - α51', L: 0 [(string -> (string -> string)) ~ ([string] -> α51'), (string -> (string -> string)) <: ([string] -> α51')]], α51' <: ([α49'] -> α52')]]]
+//│ | | | | U L: 2 [string ~ α52', [string - (string -> string) ~ ([α49'] -> α52') - α52', L: 1 [(string -> string) ~ ([α49'] -> α52'), [(string -> string) - (string -> (string -> string)) ~ ([string] -> α51') - α51', L: 0 [(string -> (string -> string)) ~ ([string] -> α51'), (string -> (string -> string)) <: ([string] -> α51')]], α51' <: ([α49'] -> α52')]]]
+//│ | | | 1. : α52'
+//│ | | | U Q [(string -> unit)] ~ (α52' -> α53')
+//│ | | | U L: 0 [(string -> unit) ~ (α52' -> α53'), (string -> unit) <: (α52' -> α53')]
+//│ | | | U Q string ~ α52'
+//│ | | | U Q unit ~ α53'
+//│ | | | U L: 1 [string ~ α52', [string - (string -> unit) ~ (α52' -> α53') - α52', L: 0 [(string -> unit) ~ (α52' -> α53'), (string -> unit) <: (α52' -> α53')]]]
+//│ | | | U Q string ~ string
+//│ | | | U L: 1 [unit ~ α53', [unit - (string -> unit) ~ (α52' -> α53') - α53', L: 0 [(string -> unit) ~ (α52' -> α53'), (string -> unit) <: (α52' -> α53')]]]
+//│ | | | U L: 2 [string ~ string, [string - (string -> unit) ~ (α52' -> α53') - α52', L: 0 [(string -> unit) ~ (α52' -> α53'), (string -> unit) <: (α52' -> α53')]], [α52' - ([α49'] -> α52') ~ (string -> string) - string, L: 1 [([α49'] -> α52') ~ (string -> string), ([α49'] -> α52') :> α51', [α51' - ([string] -> α51') ~ (string -> (string -> string)) - (string -> string), L: 0 [([string] -> α51') ~ (string -> (string -> string)), ([string] -> α51') :> (string -> (string -> string))]]]]]
+//│ | | | Serializing dataflow
+//│ | | | tv : α52',  upperbound : List(α52', α49', ([α49'] -> α52'), α51'), lowerbounds : List(α51', α52', α49')
+//│ | | | tv : α52',  upperbound : List(α52', α49', ([α49'] -> α52'), α51'), lowerbounds : List(α51', α52', α49')
+//│ | | | tv : α51',  upperbound : List(α51', α52', α49', ([α49'] -> α52')), lowerbounds : List(α49', α51', α52')
+//│ | | | tv : α51',  upperbound : List(α51', α52', α49', ([α49'] -> α52')), lowerbounds : List(α49', α51', α52')
+//│ | | 1. : α53'
+//│ | | U Q α53' ~ α50'
+//│ | | U L: 0 [α53' ~ α50', α53' <: α50']
+//│ | | U Q unit ~ α50'
+//│ | | U L: 1 [unit ~ α50', [unit - (string -> unit) ~ (α52' -> α53') - α53', L: 0 [(string -> unit) ~ (α52' -> α53'), (string -> unit) <: (α52' -> α53')]], α53' <: α50']
+//│ | | 1. Typing term print_string (^ "Unreleased: " name) App
+//│ | | | 1. Typing term print_string Var
+//│ | | | 1. : [(string -> unit)]
+//│ | | | 1. Typing term ^ "Unreleased: " name App
+//│ | | | | 1. Typing term ^ "Unreleased: " App
+//│ | | | | | 1. Typing term ^ Var
+//│ | | | | | 1. : [(string -> (string -> string))]
+//│ | | | | | 1. Typing term "Unreleased: " StrLit
+//│ | | | | | 1. : [string]
+//│ | | | | | U Q [(string -> (string -> string))] ~ ([string] -> α54')
+//│ | | | | | U L: 0 [(string -> (string -> string)) ~ ([string] -> α54'), (string -> (string -> string)) <: ([string] -> α54')]
+//│ | | | | | U Q (string -> string) ~ α54'
+//│ | | | | | U L: 1 [(string -> string) ~ α54', [(string -> string) - (string -> (string -> string)) ~ ([string] -> α54') - α54', L: 0 [(string -> (string -> string)) ~ ([string] -> α54'), (string -> (string -> string)) <: ([string] -> α54')]]]
+//│ | | | | 1. : α54'
+//│ | | | | 1. Typing term name Var
+//│ | | | | 1. : [α49']
+//│ | | | | U Q α54' ~ ([α49'] -> α55')
+//│ | | | | U L: 0 [α54' ~ ([α49'] -> α55'), α54' <: ([α49'] -> α55')]
+//│ | | | | U Q (string -> string) ~ ([α49'] -> α55')
+//│ | | | | U L: 1 [(string -> string) ~ ([α49'] -> α55'), [(string -> string) - (string -> (string -> string)) ~ ([string] -> α54') - α54', L: 0 [(string -> (string -> string)) ~ ([string] -> α54'), (string -> (string -> string)) <: ([string] -> α54')]], α54' <: ([α49'] -> α55')]
+//│ | | | | U Q string ~ α55'
+//│ | | | | U L: 2 [string ~ α55', [string - (string -> string) ~ ([α49'] -> α55') - α55', L: 1 [(string -> string) ~ ([α49'] -> α55'), [(string -> string) - (string -> (string -> string)) ~ ([string] -> α54') - α54', L: 0 [(string -> (string -> string)) ~ ([string] -> α54'), (string -> (string -> string)) <: ([string] -> α54')]], α54' <: ([α49'] -> α55')]]]
+//│ | | | 1. : α55'
+//│ | | | U Q [(string -> unit)] ~ (α55' -> α56')
+//│ | | | U L: 0 [(string -> unit) ~ (α55' -> α56'), (string -> unit) <: (α55' -> α56')]
+//│ | | | U Q string ~ α55'
+//│ | | | U Q unit ~ α56'
+//│ | | | U L: 1 [string ~ α55', [string - (string -> unit) ~ (α55' -> α56') - α55', L: 0 [(string -> unit) ~ (α55' -> α56'), (string -> unit) <: (α55' -> α56')]]]
+//│ | | | U L: 1 [unit ~ α56', [unit - (string -> unit) ~ (α55' -> α56') - α56', L: 0 [(string -> unit) ~ (α55' -> α56'), (string -> unit) <: (α55' -> α56')]]]
+//│ | | 1. : α56'
+//│ | | U Q α56' ~ α50'
+//│ | | U L: 0 [α56' ~ α50', α56' <: α50']
+//│ | 1. : α50'
+//│ 1. : (([α48'], [α49'],) -> α50')
+//│ ⬤ U Typed as: (([α48'], [α49'],) -> α50')
+//│  where: 
+//│ version_check: (bool, int,) -> int
+//│ version_validate: (bool, string,) -> unit
+//│ U max: 2, total: 36

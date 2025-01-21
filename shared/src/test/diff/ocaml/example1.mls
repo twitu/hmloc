@@ -1,0 +1,166 @@
+:d
+:unifyDbg
+:unify
+let even x = (x mod 2) == 0
+if even 3 then print_endline "even" else print_endline "odd"
+//│ 1. Typing term x => == (mod x 2) 0 Lam
+//│ | 1. Typing pattern x Var
+//│ | 1. : α42'
+//│ | 1. Typing term == (mod x 2) 0 App
+//│ | | 1. Typing term == (mod x 2) App
+//│ | | | 1. Typing term == Var
+//│ | | | 1. : [(α43' -> (α43' -> bool))]
+//│ | | | 1. Typing term mod x 2 App
+//│ | | | | 1. Typing term mod x App
+//│ | | | | | 1. Typing term mod Var
+//│ | | | | | 1. : [(int -> (int -> int))]
+//│ | | | | | 1. Typing term x Var
+//│ | | | | | 1. : [α42']
+//│ | | | | | U Q [(int -> (int -> int))] ~ ([α42'] -> α44')
+//│ | | | | | U L: 0 [(int -> (int -> int)) ~ ([α42'] -> α44'), (int -> (int -> int)) <: ([α42'] -> α44')]
+//│ | | | | | U Q int ~ [α42']
+//│ | | | | | U Q (int -> int) ~ α44'
+//│ | | | | | U L: 1 [int ~ α42', [int - (int -> (int -> int)) ~ ([α42'] -> α44') - α42', L: 0 [(int -> (int -> int)) ~ ([α42'] -> α44'), (int -> (int -> int)) <: ([α42'] -> α44')]]]
+//│ | | | | | U L: 1 [(int -> int) ~ α44', [(int -> int) - (int -> (int -> int)) ~ ([α42'] -> α44') - α44', L: 0 [(int -> (int -> int)) ~ ([α42'] -> α44'), (int -> (int -> int)) <: ([α42'] -> α44')]]]
+//│ | | | | 1. : α44'
+//│ | | | | 1. Typing term 2 IntLit
+//│ | | | | 1. : [int]
+//│ | | | | U Q α44' ~ ([int] -> α45')
+//│ | | | | U L: 0 [α44' ~ ([int] -> α45'), α44' <: ([int] -> α45')]
+//│ | | | | U Q (int -> int) ~ ([int] -> α45')
+//│ | | | | U L: 1 [(int -> int) ~ ([int] -> α45'), [(int -> int) - (int -> (int -> int)) ~ ([α42'] -> α44') - α44', L: 0 [(int -> (int -> int)) ~ ([α42'] -> α44'), (int -> (int -> int)) <: ([α42'] -> α44')]], α44' <: ([int] -> α45')]
+//│ | | | | U Q int ~ [int]
+//│ | | | | U Q int ~ α45'
+//│ | | | | U L: 2 [int ~ int, [int - (int -> int) ~ ([int] -> α45') - int, L: 1 [(int -> int) ~ ([int] -> α45'), [(int -> int) - (int -> (int -> int)) ~ ([α42'] -> α44') - α44', L: 0 [(int -> (int -> int)) ~ ([α42'] -> α44'), (int -> (int -> int)) <: ([α42'] -> α44')]], α44' <: ([int] -> α45')]]]
+//│ | | | | Serializing dataflow
+//│ | | | | tv : α44',  upperbound : List(α45', α44', ([int] -> α45')), lowerbounds : List(α44', α45', int)
+//│ | | | | tv : α44',  upperbound : List(α45', α44', ([int] -> α45')), lowerbounds : List(α44', α45', int)
+//│ | | | | U L: 2 [int ~ α45', [int - (int -> int) ~ ([int] -> α45') - α45', L: 1 [(int -> int) ~ ([int] -> α45'), [(int -> int) - (int -> (int -> int)) ~ ([α42'] -> α44') - α44', L: 0 [(int -> (int -> int)) ~ ([α42'] -> α44'), (int -> (int -> int)) <: ([α42'] -> α44')]], α44' <: ([int] -> α45')]]]
+//│ | | | 1. : α45'
+//│ | | | U Q [(α43' -> (α43' -> bool))] ~ (α45' -> α46')
+//│ | | | U L: 0 [(α43' -> (α43' -> bool)) ~ (α45' -> α46'), (α43' -> (α43' -> bool)) <: (α45' -> α46')]
+//│ | | | U Q α43' ~ α45'
+//│ | | | U Q (α43' -> bool) ~ α46'
+//│ | | | U L: 1 [α43' ~ α45', [α43' - (α43' -> (α43' -> bool)) ~ (α45' -> α46') - α45', L: 0 [(α43' -> (α43' -> bool)) ~ (α45' -> α46'), (α43' -> (α43' -> bool)) <: (α45' -> α46')]]]
+//│ | | | U L: 1 [(α43' -> bool) ~ α46', [(α43' -> bool) - (α43' -> (α43' -> bool)) ~ (α45' -> α46') - α46', L: 0 [(α43' -> (α43' -> bool)) ~ (α45' -> α46'), (α43' -> (α43' -> bool)) <: (α45' -> α46')]]]
+//│ | | 1. : α46'
+//│ | | 1. Typing term 0 IntLit
+//│ | | 1. : [int]
+//│ | | U Q α46' ~ ([int] -> α47')
+//│ | | U L: 0 [α46' ~ ([int] -> α47'), α46' <: ([int] -> α47')]
+//│ | | U Q (α43' -> bool) ~ ([int] -> α47')
+//│ | | U L: 1 [(α43' -> bool) ~ ([int] -> α47'), [(α43' -> bool) - (α43' -> (α43' -> bool)) ~ (α45' -> α46') - α46', L: 0 [(α43' -> (α43' -> bool)) ~ (α45' -> α46'), (α43' -> (α43' -> bool)) <: (α45' -> α46')]], α46' <: ([int] -> α47')]
+//│ | | U Q α43' ~ [int]
+//│ | | U Q bool ~ α47'
+//│ | | U L: 2 [α43' ~ int, [α43' - (α43' -> bool) ~ ([int] -> α47') - int, L: 1 [(α43' -> bool) ~ ([int] -> α47'), [(α43' -> bool) - (α43' -> (α43' -> bool)) ~ (α45' -> α46') - α46', L: 0 [(α43' -> (α43' -> bool)) ~ (α45' -> α46'), (α43' -> (α43' -> bool)) <: (α45' -> α46')]], α46' <: ([int] -> α47')]]]
+//│ | | U L: 2 [bool ~ α47', [bool - (α43' -> bool) ~ ([int] -> α47') - α47', L: 1 [(α43' -> bool) ~ ([int] -> α47'), [(α43' -> bool) - (α43' -> (α43' -> bool)) ~ (α45' -> α46') - α46', L: 0 [(α43' -> (α43' -> bool)) ~ (α45' -> α46'), (α43' -> (α43' -> bool)) <: (α45' -> α46')]], α46' <: ([int] -> α47')]]]
+//│ | 1. : α47'
+//│ 1. : (α42' -> α47')
+//│ ⬤ U Typed as: (α42' -> α47')
+//│  where: 
+//│ 0. Typing term if even 3(true) then print_endline "even" then (false) then print_endline "odd" If
+//│ | If(App(Var(even), IntLit(3)), List(IfThen(Var(true), App(Var(print_endline), StrLit(even)), IfThen(Var(false), App(Var(print_endline), StrLit(odd))))
+//│ | 0. Typing term even 3 App
+//│ | | 0. Typing term even Var
+//│ | | 0. : [(α48 -> α52)]
+//│ | | 0. Typing term 3 IntLit
+//│ | | 0. : [int]
+//│ | | U Q [(α48 -> α52)] ~ ([int] -> α54)
+//│ | | U L: 0 [(α48 -> α52) ~ ([int] -> α54), (α48 -> α52) <: ([int] -> α54)]
+//│ | | U Q α48 ~ [int]
+//│ | | U Q α52 ~ α54
+//│ | | U L: 1 [α48 ~ int, [α48 - (α48 -> α52) ~ ([int] -> α54) - int, L: 0 [(α48 -> α52) ~ ([int] -> α54), (α48 -> α52) <: ([int] -> α54)]]]
+//│ | | U Q int ~ [int]
+//│ | | U L: 1 [α52 ~ α54, [α52 - (α48 -> α52) ~ ([int] -> α54) - α54, L: 0 [(α48 -> α52) ~ ([int] -> α54), (α48 -> α52) <: ([int] -> α54)]]]
+//│ | | U Q bool ~ α54
+//│ | | U L: 1 [int ~ int, [int - (int -> (int -> int)) ~ ([α48] -> α49) - α48, L: 0 [(int -> (int -> int)) ~ ([α48] -> α49), (int -> (int -> int)) <: ([α48] -> α49)]], [α48 - (α48 -> α52) ~ ([int] -> α54) - int, L: 0 [(α48 -> α52) ~ ([int] -> α54), (α48 -> α52) <: ([int] -> α54)]]]
+//│ | | Serializing dataflow
+//│ | | tv : α48,  upperbound : List(), lowerbounds : List()
+//│ | | tv : α48,  upperbound : List(), lowerbounds : List()
+//│ | | U L: 2 [bool ~ α54, [bool - (α51 -> bool) ~ ([int] -> α52) - α52, L: 1 [(α51 -> bool) ~ ([int] -> α52), [(α51 -> bool) - (α51 -> (α51 -> bool)) ~ (α50 -> α53) - α53, L: 0 [(α51 -> (α51 -> bool)) ~ (α50 -> α53), (α51 -> (α51 -> bool)) <: (α50 -> α53)]], α53 <: ([int] -> α52)]], [α52 - (α48 -> α52) ~ ([int] -> α54) - α54, L: 0 [(α48 -> α52) ~ ([int] -> α54), (α48 -> α52) <: ([int] -> α54)]]]
+//│ | | U Q bool ~ α52
+//│ | | U L: 2 [bool ~ α52, [bool - (α51 -> bool) ~ ([int] -> α52) - α52, L: 1 [(α51 -> bool) ~ ([int] -> α52), [(α51 -> bool) - (α51 -> (α51 -> bool)) ~ (α50 -> α53) - α53, L: 0 [(α51 -> (α51 -> bool)) ~ (α50 -> α53), (α51 -> (α51 -> bool)) <: (α50 -> α53)]], α53 <: ([int] -> α52)]], [α52 - (α48 -> α52) ~ ([int] -> α54) - α54, L: 0 [(α48 -> α52) ~ ([int] -> α54), (α48 -> α52) <: ([int] -> α54)]], [α54 - ([int] -> α54) ~ (α48 -> α52) - α52, L: 0 [([int] -> α54) ~ (α48 -> α52), ([int] -> α54) :> (α48 -> α52)]]]
+//│ | | U Q bool ~ bool
+//│ | | U L: 2 [bool ~ bool, [bool - (α51 -> bool) ~ ([int] -> α52) - α52, L: 1 [(α51 -> bool) ~ ([int] -> α52), [(α51 -> bool) - (α51 -> (α51 -> bool)) ~ (α50 -> α53) - α53, L: 0 [(α51 -> (α51 -> bool)) ~ (α50 -> α53), (α51 -> (α51 -> bool)) <: (α50 -> α53)]], α53 <: ([int] -> α52)]], [α52 - (α48 -> α52) ~ ([int] -> α54) - α54, L: 0 [(α48 -> α52) ~ ([int] -> α54), (α48 -> α52) <: ([int] -> α54)]], [α54 - ([int] -> α54) ~ (α48 -> α52) - α52, L: 0 [([int] -> α54) ~ (α48 -> α52), ([int] -> α54) :> (α48 -> α52)]], [α52 - ([int] -> α52) ~ (α51 -> bool) - bool, L: 1 [([int] -> α52) ~ (α51 -> bool), ([int] -> α52) :> α53, [α53 - (α50 -> α53) ~ (α51 -> (α51 -> bool)) - (α51 -> bool), L: 0 [(α50 -> α53) ~ (α51 -> (α51 -> bool)), (α50 -> α53) :> (α51 -> (α51 -> bool))]]]]]
+//│ | | Serializing dataflow
+//│ | | tv : α53,  upperbound : List(α52, α53, ([int] -> α52)), lowerbounds : List(α53, α52, int)
+//│ | | tv : α53,  upperbound : List(α52, α53, ([int] -> α52)), lowerbounds : List(α53, α52, int)
+//│ | | tv : α52,  upperbound : List(α53, α52, ([int] -> α52)), lowerbounds : List(α53, α52, int)
+//│ | | tv : α52,  upperbound : List(α53, α52, ([int] -> α52)), lowerbounds : List(α53, α52, int)
+//│ | | tv : α54,  upperbound : List(), lowerbounds : List()
+//│ | | tv : α54,  upperbound : List(), lowerbounds : List()
+//│ | | tv : α52,  upperbound : List(α53, α52, ([int] -> α52)), lowerbounds : List(α53, α52, int)
+//│ | | tv : α52,  upperbound : List(α53, α52, ([int] -> α52)), lowerbounds : List(α53, α52, int)
+//│ | | tv : α53,  upperbound : List(α52, α53, ([int] -> α52)), lowerbounds : List(α53, α52, int)
+//│ | | tv : α53,  upperbound : List(α52, α53, ([int] -> α52)), lowerbounds : List(α53, α52, int)
+//│ | 0. : α54
+//│ | U Q α54 ~ bool
+//│ | U L: 0 [α54 ~ bool, α54 <: bool]
+//│ | U Q α52 ~ bool
+//│ | U L: 1 [α52 ~ bool, [α52 - (α48 -> α52) ~ ([int] -> α54) - α54, L: 0 [(α48 -> α52) ~ ([int] -> α54), (α48 -> α52) <: ([int] -> α54)]], α54 <: bool]
+//│ | U Q α54 ~ bool
+//│ | U L: 1 [α54 ~ bool, [α54 - ([int] -> α54) ~ (α48 -> α52) - α52, L: 0 [([int] -> α54) ~ (α48 -> α52), ([int] -> α54) :> (α48 -> α52)]], [α52 - (α48 -> α52) ~ ([int] -> α54) - α54, L: 0 [(α48 -> α52) ~ ([int] -> α54), (α48 -> α52) <: ([int] -> α54)]], α54 <: bool]
+//│ | U Q bool ~ bool
+//│ | U L: 1 [bool ~ bool, bool :> α54, [α54 - ([int] -> α54) ~ (α48 -> α52) - α52, L: 0 [([int] -> α54) ~ (α48 -> α52), ([int] -> α54) :> (α48 -> α52)]], [α52 - (α48 -> α52) ~ ([int] -> α54) - α54, L: 0 [(α48 -> α52) ~ ([int] -> α54), (α48 -> α52) <: ([int] -> α54)]], α54 <: bool]
+//│ | Serializing dataflow
+//│ | tv : α54,  upperbound : List(bool), lowerbounds : List()
+//│ | tv : α54,  upperbound : List(bool), lowerbounds : List()
+//│ | tv : α52,  upperbound : List(α53, α52, ([int] -> α52)), lowerbounds : List(α53, α52, int)
+//│ | tv : α52,  upperbound : List(α53, α52, ([int] -> α52)), lowerbounds : List(α53, α52, int)
+//│ | tv : α54,  upperbound : List(bool), lowerbounds : List()
+//│ | tv : α54,  upperbound : List(bool), lowerbounds : List()
+//│ | 0. Typing term print_endline "even" App
+//│ | | 0. Typing term print_endline Var
+//│ | | 0. : [(string -> unit)]
+//│ | | 0. Typing term "even" StrLit
+//│ | | 0. : [string]
+//│ | | U Q [(string -> unit)] ~ ([string] -> α56)
+//│ | | U L: 0 [(string -> unit) ~ ([string] -> α56), (string -> unit) <: ([string] -> α56)]
+//│ | | U Q string ~ [string]
+//│ | | U Q unit ~ α56
+//│ | | U L: 1 [string ~ string, [string - (string -> unit) ~ ([string] -> α56) - string, L: 0 [(string -> unit) ~ ([string] -> α56), (string -> unit) <: ([string] -> α56)]]]
+//│ | | Serializing dataflow
+//│ | | U L: 1 [unit ~ α56, [unit - (string -> unit) ~ ([string] -> α56) - α56, L: 0 [(string -> unit) ~ ([string] -> α56), (string -> unit) <: ([string] -> α56)]]]
+//│ | 0. : α56
+//│ | U Q α56 ~ α55
+//│ | U L: 0 [α56 ~ α55, α56 <: α55]
+//│ | U Q unit ~ α55
+//│ | U L: 1 [unit ~ α55, [unit - (string -> unit) ~ ([string] -> α56) - α56, L: 0 [(string -> unit) ~ ([string] -> α56), (string -> unit) <: ([string] -> α56)]], α56 <: α55]
+//│ | 0. Typing term print_endline "odd" App
+//│ | | 0. Typing term print_endline Var
+//│ | | 0. : [(string -> unit)]
+//│ | | 0. Typing term "odd" StrLit
+//│ | | 0. : [string]
+//│ | | U Q [(string -> unit)] ~ ([string] -> α57)
+//│ | | U L: 0 [(string -> unit) ~ ([string] -> α57), (string -> unit) <: ([string] -> α57)]
+//│ | | U Q unit ~ α57
+//│ | | U L: 1 [unit ~ α57, [unit - (string -> unit) ~ ([string] -> α57) - α57, L: 0 [(string -> unit) ~ ([string] -> α57), (string -> unit) <: ([string] -> α57)]]]
+//│ | 0. : α57
+//│ | U Q α57 ~ α55
+//│ | U L: 0 [α57 ~ α55, α57 <: α55]
+//│ 0. : α55
+//│ ⬤ U Typed as: α55
+//│  where: 
+//│ even: int -> bool
+//│ U max: 2, total: 33
+
+deploy "1.1"
+//│ [ERROR] Type `err` does not match `string -> _`
+//│ 
+//│         (err) ---> (string -> _)
+//│ 
+//│ ◉ (err) comes from
+//│ │  - l.1  deploy "1.1"
+//│ │         ^^^^^^
+//│ ▼ 
+//│ ◉ (string -> _) comes from
+//│    - l.1  deploy "1.1"
+//│           ^^^^^^
+//│ ╔══[ERROR] identifier not found: deploy
+//│ ║  
+//│ ║  l.147:	deploy "1.1"
+//│ ╙──      	^^^^^^
+//│ res: 'a
+//│ U max: 1, total: 1
+//│ UERR 1 errors
+//│ L: 0 [err ~ ([string] -> α59), err <: ([string] -> α59)]
