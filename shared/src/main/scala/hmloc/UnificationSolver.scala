@@ -492,13 +492,14 @@ trait UnificationSolver extends TyperDatatypes {
           )
 
         def jsonProgLoc(loc: Loc, desc: String): Json = {
-          val (_, _, spanStart) = loc.origin.fph.getLineColAt(loc.spanStart)
+          val (startLineNum, lineStr, spanStart) = loc.origin.fph.getLineColAt(loc.spanStart)
           val (_, _, spanEnd) = loc.origin.fph.getLineColAt(loc.spanEnd)
+          // println(lineStr)
           Json.obj(
             "ProgLoc" -> Json.obj(
-              "line" -> Json.fromInt(loc.origin.startLineNum),
+              "line" -> Json.fromString(lineStr),
               "char_range" -> Json.arr(Json.fromInt(spanStart), Json.fromInt(spanEnd)),
-              "desc" -> (if (desc.isEmpty) Json.Null else Json.fromString(desc))
+              "desc" -> (if (desc.isEmpty) loc.origin.fileName else Json.fromString(desc))
             )
           )
         }
