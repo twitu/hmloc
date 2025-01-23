@@ -44,7 +44,7 @@ trait UnificationSolver extends TyperDatatypes {
       stats = (math.max(stats._1, queue.length), stats._2 + 1)
     }
     def cached(u: Unification): Bool =
-      cache((u.a.unwrapProvs, u.b.unwrapProvs, u.level)) || cache((u.b.unwrapProvs, u.a.unwrapProvs, u.level))
+      cache((u.a, u.b, u.level)) || cache((u.b, u.a, u.level))
     def cache(u: Unification): Unit = cache += ((u.a, u.b, u.level))
     def addError(u: Unification): Unit = {
       println(s"UERR $u")
@@ -75,9 +75,12 @@ trait UnificationSolver extends TyperDatatypes {
           tr1.targs.zip(tr2.targs).foreach { case (arg1, arg2) =>
             enqueueUnification(Unification(Queue(Constructor(arg1, arg2, tr1, tr2, u))))
           }
-          println("Serializing dataflow")
-          jsonContent = u.serializeDataFlow(jsonContent)
-
+          if (u.monotonic()) {
+            println("Serializing dataflow")
+            // debug using error function
+            addError(u)
+            jsonContent = u.serializeDataFlow(jsonContent)
+          }
         case (_: TypeRef, _: TypeRef) => addError(u)
         case (tup1: TupleType, tup2: TupleType) if tup1.fields.length === tup2.fields.length =>
           tup1.fields.map(_._2).zip(tup2.fields.map(_._2)).zipWithIndex.foreach {
@@ -104,11 +107,11 @@ trait UnificationSolver extends TyperDatatypes {
             else enqueueUnification(tvuni.concat(u))
           })
 
-          // update rhs with unification if it is a type variable
-          rhs match {
-            case tv: TV => tv.uni ::= u
-            case _ => ()
-          }
+          // // update rhs with unification if it is a type variable
+          // rhs match {
+          //   case tv: TV => tv.uni ::= u
+          //   case _ => ()
+          // }
           tv.uni ::= u
         // rhs0.level >= tv.level
         case (tv: TypeVariable, rhs) =>
@@ -123,10 +126,10 @@ trait UnificationSolver extends TyperDatatypes {
           })
 
           // update rhs with unification if it is a type variable
-          rhs match {
-            case tv: TV => tv.uni ::= u
-            case _ => ()
-          }
+          // rhs match {
+          //   case tv: TV => tv.uni ::= u
+          //   case _ => ()
+          // }
           tv.uni ::= u
         case (lhs, tv: TypeVariable) if lhs.level <= tv.level =>
           // u = st1 ---- tv
@@ -394,10 +397,6 @@ trait UnificationSolver extends TyperDatatypes {
     }
 
     def serializeDataFlow(existingJson: io.circe.Json): io.circe.Json = {
-      // if(!monotonic()){
-      // println(s"Skipping non-monotonic unification : $this")
-      // return ""
-      // }
       val flowElements = ListBuffer[Json]()
       flow.foreach { df => 
         val flattenedBuf = ListBuffer[Json]()
