@@ -236,9 +236,9 @@ class Typer(var dbg: Boolean, var verbose: Bool, var explainErrors: Bool)
     case t: Term =>
       val ty = typeTerm(t)
       if (!allowPure) {
-        if (t.isInstanceOf[Var] || t.isInstanceOf[Lit])
-          warn("Pure expression does nothing in statement position.", t.toLoc)
-        else
+        // if (t.isInstanceOf[Var] || t.isInstanceOf[Lit])
+        //   warn("Pure expression does nothing in statement position.", t.toLoc)
+        // else
           uniState.unify(mkProv(ty, TypeProvenance(t.toCoveringLoc, "expression in statement position")), ExtrType(false)(TypeProvenance(N, "result")))
       }
       L(PolymorphicType(0, ty))
@@ -265,7 +265,7 @@ class Typer(var dbg: Boolean, var verbose: Bool, var explainErrors: Bool)
       val ty = typeTerm(rhs)(ctx.nextLevel, raise, vars)
       uniState.unify(ty, e_ty)
       e_ty
-    } else typeTerm(rhs)(ctx.nextLevel, raise, vars)
+    } else typeTerm(rhs, nme.name)(ctx.nextLevel, raise, vars)
     PolymorphicType(lvl, res)
   }
 
@@ -418,7 +418,7 @@ class Typer(var dbg: Boolean, var verbose: Bool, var explainErrors: Bool)
         val newCtx = ctx.nest
         val param_ty = typePattern(pat)(newCtx, raise, vars)
         val body_ty = typeTerm(body)(newCtx, raise, vars)
-        FunctionType(param_ty, body_ty)(tp(term.toLoc, "function"))
+        FunctionType(param_ty, body_ty)(prov)
       // specialize Cons Nil application for better error messages
       case cons@App(Var("Cons"), Tup(v :: Var("Nil") :: Nil)) =>
         // version 2 inline Nil
