@@ -126,7 +126,12 @@ abstract class TyperHelpers { Typer: Typer =>
     //      — though I'm not sure whether it's best as a `lazy val` or a `val`.
     override lazy val hashCode: Int = this match {
       case tv: TypeVariable => tv.uid
-      case ProvType(und) => und.hashCode
+      case p@ProvType(und) => und.hashCode
+      // Intelligently hash type refs by their type and location
+      case tr: TypeRef => 
+        val typeHash = scala.runtime.ScalaRunTime._hashCode(tr)
+        val locHash = tr.prov.loco.map(_.hashCode).getOrElse(0)
+        typeHash + locHash
       case p: Product => scala.runtime.ScalaRunTime._hashCode(p)
     }
 
