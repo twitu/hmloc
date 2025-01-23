@@ -81,6 +81,16 @@ trait UnificationSolver extends TyperDatatypes {
             addError(u)
             jsonContent = u.serializeDataFlow(jsonContent)
           }
+        // Handle special case to display results being returned
+        case (_: TypeRef, ut: ExtrType) if !ut.pol => {
+            println("reached here")
+            if (u.monotonic()) {
+              println("Serializing dataflow")
+              // debug using error function
+              addError(u)
+              jsonContent = u.serializeDataFlow(jsonContent)
+            }
+        }
         case (_: TypeRef, _: TypeRef) => addError(u)
         case (tup1: TupleType, tup2: TupleType) if tup1.fields.length === tup2.fields.length =>
           tup1.fields.map(_._2).zip(tup2.fields.map(_._2)).zipWithIndex.foreach {
@@ -463,6 +473,8 @@ trait UnificationSolver extends TyperDatatypes {
             println(s"tv : ${tv.toString},  upperbound : ${tv.upperBounds}, lowerbounds : ${tv.lowerBounds}")
             jsonTypeVar(tv.uid.toString, Some(tv.prov.desc))
           }
+          case ut: ExtrType if ut.pol => jsonType("bot", Some(ut.prov.desc))
+          case ut: ExtrType if !ut.pol => jsonType("top", Some(ut.prov.desc))
           case ls: TupleType    => jsonType("Tuple", Some(ls.prov.desc))
           case ft: FunctionType => jsonType("Function", Some(ft.prov.desc))
           case tf: TypeRef if tf.defn == TypeName("list") => jsonType("List", Some(tf.prov.desc))

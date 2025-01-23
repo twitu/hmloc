@@ -239,7 +239,7 @@ class Typer(var dbg: Boolean, var verbose: Bool, var explainErrors: Bool)
         if (t.isInstanceOf[Var] || t.isInstanceOf[Lit])
           warn("Pure expression does nothing in statement position.", t.toLoc)
         else
-          uniState.unify(mkProv(ty, TypeProvenance(t.toCoveringLoc, "expression in statement position")), UnitType)
+          uniState.unify(mkProv(ty, TypeProvenance(t.toCoveringLoc, "expression in statement position")), ExtrType(false)(TypeProvenance(N, "result")))
       }
       L(PolymorphicType(0, ty))
     case _ =>

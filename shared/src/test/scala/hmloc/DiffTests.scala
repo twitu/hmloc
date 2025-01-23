@@ -725,7 +725,7 @@ class DiffTests
                 typingOutputs += R[Ls[Str], Str -> Ls[Str]](nme.name -> typingOutput)
               case desug: Statement =>
                 typer.dbg = mode.dbg
-                typer.typeStatement(desug, allowPure = true)(ctx, raiseToBuffer) match {
+                typer.typeStatement(desug, allowPure = false)(ctx, raiseToBuffer) match {
                   // when does this happen??
                   case R(binds) =>
                     binds.foreach { case (nme, pty) =>
