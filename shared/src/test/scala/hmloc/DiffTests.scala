@@ -391,7 +391,8 @@ class DiffTests
           val (mainMsg, seqStr, msgs, sctx, _, _) = UniErrReport.unapply(err).get
 
           if (err.level == 0) {
-            val mainPre = "[ERROR] "
+            // val mainPre = "[ERROR] "
+            val mainPre = ""
             output(s"$mainPre${mainMsg.showIn(sctx)}")
             if (seqStr.nonEmpty) {
               output("")

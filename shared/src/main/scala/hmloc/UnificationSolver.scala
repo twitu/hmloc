@@ -322,7 +322,7 @@ trait UnificationSolver extends TyperDatatypes {
     def createErrorMessage(level: Int = 0, showCtx: Opt[ShowCtx] = N)(implicit ctx: Ctx, showTV: Set[TV]): UniErrReport = {
       println(s"UERR REPORT $toString")
       val sctx = showCtx.getOrElse(createCtx)
-      val mainMsg = msg"Type `${a.expOcamlTy()(ctx, Set())}` does not match `${b.expOcamlTy()(ctx, Set())}`"
+      val mainMsg = msg"Type `${a.expOcamlTy()(ctx, Set())}` flows into `${b.expOcamlTy()(ctx, Set())}`"
       val seqString = createSequenceString
       def msg(a: ST): Message = a.unwrapProvs match {
         case tv: TV => msg"(${tv.expOcamlTy()}) is assumed for"
