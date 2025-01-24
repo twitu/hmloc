@@ -425,7 +425,7 @@ trait UnificationSolver extends TyperDatatypes {
     }
     
     private def flattenDataFlowJson(df: DataFlow): String = {
-      def toJson(df: DataFlow, acc: ListBuffer[Json]): Unit = {
+      def toJson(df: DataFlow, acc: ListBuffer[Json], depth : Int = 0): Unit = {
         def jsonType(name: String, desc: Option[String] = None): Json =
           Json.obj(
             "Type" -> Json.obj(
@@ -456,12 +456,12 @@ trait UnificationSolver extends TyperDatatypes {
         def jsonProgLoc(loc: Loc, desc: String): Json = {
           val (startLineNum, lineStr, spanStart) = loc.origin.fph.getLineColAt(loc.spanStart)
           val (_, _, spanEnd) = loc.origin.fph.getLineColAt(loc.spanEnd)
-          // println(lineStr)
           Json.obj(
             "ProgLoc" -> Json.obj(
               "line" -> Json.fromString(lineStr),
               "char_range" -> Json.arr(Json.fromInt(spanStart), Json.fromInt(spanEnd)),
-              "desc" -> (if (desc.isEmpty) Json.fromString(loc.origin.fileName) else Json.fromString(desc))
+              "desc" -> (if (desc.isEmpty) Json.fromString(loc.origin.fileName) else Json.fromString(desc)),
+              "depth" -> Json.fromInt(depth)
             )
           )
         }
@@ -507,7 +507,7 @@ trait UnificationSolver extends TyperDatatypes {
             subflowBuf += jsonConstructorArg(ctoraName, c.getIndex, enter = true, Some(ctora.prov.desc))
 
             // subflow from unification
-            uni.flow.foreach(sub => toJson(sub, subflowBuf))
+            uni.flow.foreach(sub => toJson(sub, subflowBuf, depth+1))
 
             // record constructor-arg exit
             val ctorbName = flowItem(ctorb).hcursor.downField("Type").get[String]("name").getOrElse("")
