@@ -72,8 +72,8 @@ trait UnificationSolver extends TyperDatatypes {
       val st2 = u.b.unwrapProvs
       (st1, st2) match {
         case (tr1: TypeRef, tr2: TypeRef) if tr1.defn === tr2.defn && tr1.targs.length === tr2.targs.length =>
-          tr1.targs.zip(tr2.targs).foreach { case (arg1, arg2) =>
-            enqueueUnification(Unification(Queue(Constructor(arg1, arg2, tr1, tr2, u))))
+          tr1.targs.zip(tr2.targs).zipWithIndex.foreach { case ((arg1, arg2), idx) =>
+            enqueueUnification(Unification(Queue(Constructor(arg1, arg2, tr1, tr2, u)(idx))))
           }
           if (u.monotonic()) {
             println("Serializing dataflow")
@@ -99,8 +99,8 @@ trait UnificationSolver extends TyperDatatypes {
           }
         case (_: TupleType, _: TupleType) => addError(u)
         case (FunctionType(arg1, res1), FunctionType(arg2, res2)) =>
-          enqueueUnification(Unification(Queue(Constructor(arg1, arg2, st1, st2, u))))
-          enqueueUnification(Unification(Queue(Constructor(res1, res2, st1, st2, u))))
+          enqueueUnification(Unification(Queue(Constructor(arg1, arg2, st1, st2, u)(0))))
+          enqueueUnification(Unification(Queue(Constructor(res1, res2, st1, st2, u)(1))))
         case (_: FunctionType, _: FunctionType) => addError(u)
         case (tv1: TypeVariable, tv2: TypeVariable) if tv1 === tv2 =>
           // because bounds are added to both sides any a1 <: a2 and a2 :> a1
